@@ -11,4 +11,8 @@ public class MapDto {
     private String name;
     private SquareDto[][] square;
 
+    public SquareDto[][] getSquares() {
+        return this.square;
+    }
+
 }
