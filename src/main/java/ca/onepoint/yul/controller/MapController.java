@@ -102,14 +102,22 @@ public class MapController {
 
         for(int x = 0; x < w ; x++){
             for(int y = 0; y < h; y++){
-                freeSquares[y][x] = squares[x][y].getValue() == 1 ? 1 : 0; // On the map 1 represent a road
+                freeSquares[y][x] = (squares[x][y].getValue() == 1 || squares[x][y].getValue() == 3 || squares[x][y].getValue() == 4)  ? 1 : 0; // On the map 1 represent a road, 3 = restaurant or business
             }
         }
 
         for (AvatarDto avatar: avatars){
-            System.out.println(avatar.getX() + " " + avatar.getY());
             freeSquares[avatar.getX()][avatar.getY()] = 0;
         }
+
+        for(int x = 0; x < 30; x++){
+            for(int y = 0; y< 30; y++){
+                System.out.print(squares[x][y].getValue() + " ");
+            }
+            System.out.println();
+        }
+
+        System.out.println();
 
         for(int x = 0; x < 30; x++){
             for(int y = 0; y< 30; y++){
@@ -184,7 +192,6 @@ public class MapController {
                 return reconstructPath(cameFrom, current);
             }
 
-
             openSet.remove(current);
             ArrayList<PositionDto> neighbors = new ArrayList<>();
 
@@ -238,8 +245,6 @@ public class MapController {
             }
         }
 
-        System.out.println("ERROR");
-        // Error
         return null;
     }
 
