@@ -1,8 +1,10 @@
 package ca.onepoint.yul.controller;
 
+import ca.onepoint.yul.dto.AvatarDto;
 import ca.onepoint.yul.dto.MapDto;
 import ca.onepoint.yul.dto.PositionDto;
 import ca.onepoint.yul.dto.SquareDto;
+import ca.onepoint.yul.service.IAvatarService;
 import ca.onepoint.yul.service.IMapService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,6 +24,9 @@ public class MapController {
 
     @Resource
     private IMapService iMapService;
+
+    @Resource
+    private IAvatarService iAvatarService;
 
 
     @Operation(summary = "Get a map by its id. 0 is wall, 1 is road, 2 is metro, 3 is shop or company, 4 to finish")
@@ -90,24 +95,31 @@ public class MapController {
             throw new Exception("Invalid positions > map width");
         }
 
+        List<AvatarDto> avatars = iAvatarService.getAllAvatars();
+
         // Compute the freeSquares 2D array: 1 = can go through, 0 = obstacle
         int[][] freeSquares = new int[w][h];
 
         for(int x = 0; x < w ; x++){
             for(int y = 0; y < h; y++){
-                freeSquares[x][y] = squares[x][y].getValue() == 1 ? 1 : 0; // On the map 1 represent a road
+                freeSquares[y][x] = squares[x][y].getValue() == 1 ? 1 : 0; // On the map 1 represent a road
             }
         }
 
-        for(int[] row : freeSquares){
-            for(int item : row){
-                System.out.print(item + " ");
+        for (AvatarDto avatar: avatars){
+            System.out.println(avatar.getX() + " " + avatar.getY());
+            freeSquares[avatar.getX()][avatar.getY()] = 0;
+        }
+
+        for(int x = 0; x < 30; x++){
+            for(int y = 0; y< 30; y++){
+                System.out.print(freeSquares[y][x] + " ");
             }
             System.out.println();
         }
 
         // Verify that from and to position are on roads
-        if(freeSquares[fromX][fromY] != 1 || freeSquares[toX][toY] != 1){
+        if(freeSquares[toX][toY] != 1){
             throw new Exception("From or To positions not on road !");
         }
 
@@ -118,11 +130,9 @@ public class MapController {
      * A* implementation, please read https://en.wikipedia.org/wiki/A*_search_algorithm
      */
     private List<PositionDto> aStar(int[][] freeSquares, PositionDto from, PositionDto to){
-        ArrayList<PositionDto> path = new ArrayList<>();
-
         HashMap<PositionDto, PositionDto> cameFrom = new HashMap<>();
 
-        HashSet<PositionDto> openSet = new HashSet<>();
+        ArrayList<PositionDto> openSet = new ArrayList<>();
         openSet.add(from);
 
         // Initialize gScore
@@ -130,7 +140,7 @@ public class MapController {
         for(int x = 0; x < freeSquares.length ; x++){
             for(int y = 0; y < freeSquares[0].length ; y++){
                 PositionDto position = new PositionDto(x, y);
-                gScore.put(position, Double.MAX_VALUE);
+                gScore.put(position, 999999.0);
             }
         }
         gScore.put(from, 0.0);
@@ -140,31 +150,62 @@ public class MapController {
         for(int x = 0; x < freeSquares.length ; x++){
             for(int y = 0; y < freeSquares[0].length ; y++){
                 PositionDto position = new PositionDto(x, y);
-                fScore.put(position, Double.MAX_VALUE);
+                fScore.put(position, 999999.0);
             }
         }
-        gScore.put(from, 0.0);
+        fScore.put(from, euclidianDistance(from, to));
 
         while(openSet.size() != 0){
+
             // Find the node in openSet with lowest fscore
             PositionDto current = null;
             double lowestFScore = Double.MAX_VALUE;
-            for(Map.Entry<PositionDto, Double> entry: fScore.entrySet()){
-                if(entry.getValue() < lowestFScore){
-                    lowestFScore = entry.getValue();
-                    current = entry.getKey();
+            for(PositionDto openItem: openSet){
+                if(fScore.get(openItem) < lowestFScore){
+                    lowestFScore = fScore.get(openItem);
+                    current = openItem;
                 }
             }
 
             // Arrived at destination !
             if(current.equals(to)){
+                System.out.println("END");
                 return reconstructPath(cameFrom, current);
             }
 
+
             openSet.remove(current);
             ArrayList<PositionDto> neighbors = new ArrayList<>();
+
+            // Build the neighbors
+            PositionDto top = new PositionDto(current.getX(), current.getY() - 1);
+            PositionDto right = new PositionDto(current.getX() + 1, current.getY());
+            PositionDto bottom = new PositionDto(current.getX(), current.getY() + 1);
+            PositionDto left = new PositionDto(current.getX() - 1, current.getY());
+
+            if(top.getY() >= 0 && freeSquares[top.getX()][top.getY()] == 1){
+                neighbors.add(top);
+            }
+
+            if(right.getX() < 30 && freeSquares[right.getX()][right.getY()] == 1) {
+                neighbors.add(right);
+            }
+
+            if(bottom.getY() < 30 && freeSquares[bottom.getX()][bottom.getY()] == 1) {
+                neighbors.add(bottom);
+            }
+
+            if(left.getX() >= 0 && freeSquares[left.getX()][left.getY()] == 1) {
+                neighbors.add(left);
+            }
+
+//            System.out.println(neighbors);
+
             for(PositionDto neighbor: neighbors){
                 double tentative_gScore = gScore.get(current) + 1; // assume d(current, neighbor) always == 1
+
+//                System.out.println(neighbor + " " + tentative_gScore + " " + gScore.get(neighbor));
+//                System.out.println(openSet);
                 // Go to neighbor if good score
                 if(tentative_gScore < gScore.get(neighbor)){
                     cameFrom.put(neighbor, current);
@@ -177,6 +218,7 @@ public class MapController {
             }
         }
 
+        System.out.println("ERROR");
         // Error
         return null;
     }
@@ -193,7 +235,8 @@ public class MapController {
             current = cameFrom.get(current);
             totalPath.add(current);
         }
-
+        Collections.reverse(totalPath);
+        totalPath.remove(0);
         return totalPath;
     }
 

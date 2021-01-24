@@ -27,4 +27,12 @@ public class PositionDto {
     public void setY(int y) {
         this.y = y;
     }
+
+    @Override
+    public String toString() {
+        return "PositionDto{" +
+                "x=" + x +
+                ", y=" + y +
+                '}';
+    }
 }
