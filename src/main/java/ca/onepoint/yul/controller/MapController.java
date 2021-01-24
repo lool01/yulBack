@@ -126,6 +126,17 @@ public class MapController {
         return this.aStar(freeSquares, new PositionDto(fromX, fromY), new PositionDto(toX, toY));
     }
 
+
+    PositionDto[] subway1Positions = new PositionDto[]{
+            new PositionDto(9, 8),
+            new PositionDto(8, 9),
+    };
+
+    PositionDto[] subway2Positions = new PositionDto[]{
+            new PositionDto(15, 26),
+            new PositionDto(16, 25),
+    };
+
     /**
      * A* implementation, please read https://en.wikipedia.org/wiki/A*_search_algorithm
      */
@@ -198,6 +209,15 @@ public class MapController {
             if(left.getX() >= 0 && freeSquares[left.getX()][left.getY()] == 1) {
                 neighbors.add(left);
             }
+
+            // If next to subway station, add other subway station as neighbors
+            if(Arrays.asList(subway1Positions).contains(current)){
+                neighbors.addAll(Arrays.asList(subway2Positions));
+            }
+            if(Arrays.asList(subway2Positions).contains(current)){
+                neighbors.addAll(Arrays.asList(subway1Positions));
+            }
+
 
 //            System.out.println(neighbors);
 
