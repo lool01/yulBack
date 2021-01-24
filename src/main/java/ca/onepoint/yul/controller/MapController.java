@@ -14,10 +14,7 @@ import org.springframework.boot.configurationprocessor.json.JSONException;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/map")
@@ -102,16 +99,16 @@ public class MapController {
             }
         }
 
-        // Verify that from and to position are on roads
-        if(freeSquares[fromX][fromY] != 1 || freeSquares[toX][toY] != 1){
-            throw new Exception("From or To positions not on road !");
-        }
-
         for(int[] row : freeSquares){
             for(int item : row){
                 System.out.print(item + " ");
             }
             System.out.println();
+        }
+
+        // Verify that from and to position are on roads
+        if(freeSquares[fromX][fromY] != 1 || freeSquares[toX][toY] != 1){
+            throw new Exception("From or To positions not on road !");
         }
 
         return this.aStar(freeSquares, new PositionDto(fromX, fromY), new PositionDto(toX, toY));
@@ -123,22 +120,81 @@ public class MapController {
     private List<PositionDto> aStar(int[][] freeSquares, PositionDto from, PositionDto to){
         ArrayList<PositionDto> path = new ArrayList<>();
 
+        HashMap<PositionDto, PositionDto> cameFrom = new HashMap<>();
+
         HashSet<PositionDto> openSet = new HashSet<>();
+        openSet.add(from);
 
         // Initialize gScore
-        HashMap<PositionDto, Integer> gScore = new HashMap<>();
+        HashMap<PositionDto, Double> gScore = new HashMap<>();
         for(int x = 0; x < freeSquares.length ; x++){
             for(int y = 0; y < freeSquares[0].length ; y++){
                 PositionDto position = new PositionDto(x, y);
-                gScore.put(position, Integer.MAX_VALUE);
+                gScore.put(position, Double.MAX_VALUE);
             }
         }
-        gScore.put(from, 0);
+        gScore.put(from, 0.0);
 
         // Initialize fScore
+        HashMap<PositionDto, Double> fScore = new HashMap<>();
+        for(int x = 0; x < freeSquares.length ; x++){
+            for(int y = 0; y < freeSquares[0].length ; y++){
+                PositionDto position = new PositionDto(x, y);
+                fScore.put(position, Double.MAX_VALUE);
+            }
+        }
+        gScore.put(from, 0.0);
 
+        while(openSet.size() != 0){
+            // Find the node in openSet with lowest fscore
+            PositionDto current = null;
+            double lowestFScore = Double.MAX_VALUE;
+            for(Map.Entry<PositionDto, Double> entry: fScore.entrySet()){
+                if(entry.getValue() < lowestFScore){
+                    lowestFScore = entry.getValue();
+                    current = entry.getKey();
+                }
+            }
 
-        return path;
+            // Arrived at destination !
+            if(current.equals(to)){
+                return reconstructPath(cameFrom, current);
+            }
+
+            openSet.remove(current);
+            ArrayList<PositionDto> neighbors = new ArrayList<>();
+            for(PositionDto neighbor: neighbors){
+                double tentative_gScore = gScore.get(current) + 1; // assume d(current, neighbor) always == 1
+                // Go to neighbor if good score
+                if(tentative_gScore < gScore.get(neighbor)){
+                    cameFrom.put(neighbor, current);
+                    gScore.put(neighbor, tentative_gScore);
+                    fScore.put(neighbor, gScore.get(neighbor) + euclidianDistance(neighbor, to));
+                    if(!openSet.contains(neighbor)){
+                        openSet.add(neighbor);
+                    }
+                }
+            }
+        }
+
+        // Error
+        return null;
+    }
+
+    private double euclidianDistance(PositionDto from, PositionDto to){
+        return Math.sqrt(Math.pow(to.getX() - from.getX(), 2) + Math.pow(to.getY() - from.getY(), 2));
+    }
+
+    private List<PositionDto> reconstructPath(HashMap<PositionDto, PositionDto> cameFrom, PositionDto current){
+        ArrayList<PositionDto> totalPath = new ArrayList<>();
+        totalPath.add(current);
+
+        while(cameFrom.containsKey(current)){
+            current = cameFrom.get(current);
+            totalPath.add(current);
+        }
+
+        return totalPath;
     }
 
 }
