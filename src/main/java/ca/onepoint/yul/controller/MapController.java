@@ -68,8 +68,9 @@ public class MapController {
                     content = @Content),
     })
     @CrossOrigin
-    @GetMapping("/path-finding/{fromX}/{fromY}/{toX}/{toY}")
+    @GetMapping("/path-finding/{objectType}/{fromX}/{fromY}/{toX}/{toY}")
     public List<PositionDto> pathFinding(
+            @PathVariable int objectType,
             @PathVariable int fromX, @PathVariable int fromY,
             @PathVariable int toX, @PathVariable int toY) throws Exception {
 
@@ -131,7 +132,7 @@ public class MapController {
             throw new Exception("From or To positions not on road !");
         }
 
-        return this.aStar(freeSquares, new PositionDto(fromX, fromY), new PositionDto(toX, toY));
+        return this.aStar(objectType, freeSquares, new PositionDto(fromX, fromY), new PositionDto(toX, toY));
     }
 
 
@@ -148,7 +149,7 @@ public class MapController {
     /**
      * A* implementation, please read https://en.wikipedia.org/wiki/A*_search_algorithm
      */
-    private List<PositionDto> aStar(int[][] freeSquares, PositionDto from, PositionDto to){
+    private List<PositionDto> aStar(int objectType, int[][] freeSquares, PositionDto from, PositionDto to){
         HashMap<PositionDto, PositionDto> cameFrom = new HashMap<>();
 
         ArrayList<PositionDto> openSet = new ArrayList<>();
@@ -217,13 +218,17 @@ public class MapController {
                 neighbors.add(left);
             }
 
-            // If next to subway station, add other subway station as neighbors
-            if(Arrays.asList(subway1Positions).contains(current)){
-                neighbors.addAll(Arrays.asList(subway2Positions));
+            if(objectType == 0){
+                // If person, because cars can't take the subway...
+                // If next to subway station, add other subway station as neighbors
+                if(Arrays.asList(subway1Positions).contains(current)){
+                    neighbors.addAll(Arrays.asList(subway2Positions));
+                }
+                if(Arrays.asList(subway2Positions).contains(current)){
+                    neighbors.addAll(Arrays.asList(subway1Positions));
+                }
             }
-            if(Arrays.asList(subway2Positions).contains(current)){
-                neighbors.addAll(Arrays.asList(subway1Positions));
-            }
+
 
 
 //            System.out.println(neighbors);
